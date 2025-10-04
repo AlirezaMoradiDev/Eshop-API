@@ -24,7 +24,6 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2, min_value=0)
     discount_price = models.DecimalField(null=True)
     stock = models.PositiveIntegerField(default=0)
-    image = models.ImageField(pload_to='product/', null=True, blank=True)
     is_available = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -35,3 +34,8 @@ class Product(models.Model):
     def save(self, *args, **kwargs):
         self.slug = slugify(self.name)
         return super().save()
+
+
+class ProductImage(models.Model):
+    products = models.ForeignKey(Product, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='product/', null=True, blank=True)
