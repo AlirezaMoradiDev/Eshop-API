@@ -1,10 +1,12 @@
 from django.shortcuts import render
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAdminUser
 from .serializers import CategorySerializers
 from .models import Category
 
 @api_view(['POST'])
+@permission_classes([IsAdminUser]) #  is_authenticated=True  ---->  is_staff=True ---->  ...
 def add_category(request):
     serializer = CategorySerializers(data=request.data)
     if serializer.is_valid():
@@ -15,6 +17,7 @@ def add_category(request):
 
 
 @api_view(['GET'])
+@permission_classes([IsAdminUser]) #  is_authenticated=True  ---->  is_staff=True ---->  ...
 def read_all_category(request):
     objs_catg = Category.objects.all()
     serializer = CategorySerializers(instance=objs_catg, many=True)
@@ -22,6 +25,7 @@ def read_all_category(request):
 
 
 @api_view(['GET', 'PUT'])
+@permission_classes([IsAdminUser]) #  is_authenticated=True  ---->  is_staff=True ---->  ...
 def update_obj_category(request, pk):
     if request.method == "PUT":
         try:
@@ -44,6 +48,7 @@ def update_obj_category(request, pk):
 
 
 @api_view(['DELETE'])
+@permission_classes([IsAdminUser]) #  is_authenticated=True  ---->  is_staff=True ---->  ...
 def delete_category(request, pk):
     try:
         obj_catg = Category.objects.get(id=pk)
