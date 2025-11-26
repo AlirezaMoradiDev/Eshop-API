@@ -1,4 +1,5 @@
 from django.db import models
+from user.models import MyUser
 from django.utils.text import slugify
 from django.core.validators import MinValueValidator
 
@@ -41,3 +42,36 @@ class Product(models.Model):
 class ProductImage(models.Model):
     products = models.ForeignKey(Product, on_delete=models.CASCADE)
     image = models.ImageField(upload_to='product/', null=True, blank=True)
+
+
+class Order(models.Model):
+
+    payment_method_choice = [
+        ('Paypal', 'PayPal'),
+        ('Credit Card', 'Credit Card')
+    ]
+
+    status_choice = [
+        ('pending', 'Pending'),
+        ('shipped', 'Shipped'),
+        ('delivered', 'Delivered'),
+        ('cancelled', 'Cancelled')
+    ]
+
+    order_number = models.CharField(max_length=8, unique=True, null=True, blank=True)
+    user = models.ForeignKey(MyUser, on_delete=models.CASCADE)
+    total_amount = models.DecimalField()
+    status = models.CharField(max_length=20, choices=status_choice)
+    payment_method = models.CharField(max_length=20, choices=payment_method_choice)
+    shipping_address = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+
+    def save(self,*args, **kwargs):
+        if not self.order_number:
+            last = Order.objects.all().order_by('-id').first()
+            if last and last.order_number.isdigit():
+                self.order_number = str(int(last.order_number) + 1)
+            else:
+                self.order_number = '1000'
+        super().save(*args, **kwargs)
