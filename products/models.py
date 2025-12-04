@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models import Count
+
 from user.models import MyUser
 from django.utils.text import slugify
 from django.core.validators import MinValueValidator
@@ -60,12 +62,15 @@ class Order(models.Model):
 
     order_number = models.CharField(max_length=8, unique=True, null=True, blank=True)
     user = models.ForeignKey(MyUser, on_delete=models.CASCADE)
-    total_amount = models.DecimalField()
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, choices=status_choice)
     payment_method = models.CharField(max_length=20, choices=payment_method_choice)
     shipping_address = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     paid_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return self.order_number
 
     def save(self,*args, **kwargs):
         if not self.order_number:
@@ -75,3 +80,33 @@ class Order(models.Model):
             else:
                 self.order_number = '1000'
         super().save(*args, **kwargs)
+
+
+class Cart(models.Model):
+    user = models.ForeignKey(MyUser, on_delete=models.CASCADE)
+    session_key = models.CharField(max_length=40, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.user} Cart'
+
+
+class CartItem(models.Model):
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='cart')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
+    added_at = models.DateTimeField(auto_now_add=True)
+
+
+    def __str__(self):
+        return f'{self.cart} Item'
+
+class OrderItem(models.Model):
+    quantity = models.PositiveIntegerField()
+    price_at_purchase = models.DecimalField(max_digits=10, decimal_places=2)
+    subtotal = models.DecimalField(null=True, blank=True)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True)
+
+    def calculate_subtotal(self):
+        self.subtotal = self.quantity * self.price_at_purchase
