@@ -3,8 +3,8 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAdminUser, AllowAny
 from rest_framework.views import APIView
-from .serializers import CategorySerializers, ProductSerializers
-from .models import Category, Product
+from .serializers import CategorySerializers, ProductSerializers, CartSerializer
+from .models import Category, Product, Cart
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser]) #  is_authenticated=True  ---->  is_staff=True ---->  ...
@@ -67,22 +67,27 @@ class ProductAPI(APIView):
             permission_classes = [AllowAny]
         return [permission() for permission in permission_classes]
 
-    def get(self, request):
-        if request.method == "GET":
-            products = Product.objects.all()
+    def get(self, request, name=None):
+        products = Product.objects.all()
+        if name is not None:
+            try:
+                product = Product.objects.get(name=name)
+                serializer = ProductSerializers(instance=product)
+                return Response(serializer.data)
+            except Product.DoesNotExist:
+                return Response({'error': "Product not found"})
+        else:
             if request.GET.get('category') or request.GET.get('price'):
                 if not request.GET.get('category'):
-                        products = Product.objects.filter(price=request.GET.get('price'))
+                        products = Product.objects.filter(price=request.GET.get('price')).order_by('-created_at')
                 elif not request.GET.get('price'):
-                    products = Product.objects.filter(category__name=request.GET.get('category'))
+                    products = Product.objects.filter(category__name=request.GET.get('category')).order_by('-created_at')
                 else:
                     products = Product.objects.filter(category__name=request.GET.get('category'), price=request.GET.get('price'))
             serializer = ProductSerializers(instance=products, many=True)
             return Response(serializer.data)
 
-    @permission_classes([IsAdminUser])
     def post(self, request):
-        if request.method == "POST":
             serializer = ProductSerializers(data=request.data)
             if serializer.is_valid():
                 print(request.data.get('category'))
@@ -91,9 +96,7 @@ class ProductAPI(APIView):
             else:
                 return Response(serializer.errors)
 
-    @permission_classes([IsAdminUser])
     def patch(self, request, pk):
-        if request.method == "PATCH":
             try:
                 product_obj = Product.objects.get(id=pk)
             except Product.DoesNotExist:
@@ -108,9 +111,7 @@ class ProductAPI(APIView):
             else:
                 return Response({'error': 'You must enter a category.'})
 
-    @permission_classes([IsAdminUser])
     def delete(self, request, pk):
-        if request.method == "DELETE":
             try:
                 product_obj = Product.objects.get(id=pk)
             except Product.DoesNotExist:
@@ -118,3 +119,22 @@ class ProductAPI(APIView):
 
             product_obj.delete()
             return Response({'response': f'{product_obj.name} deleted'})
+
+
+class CartAPI(APIView):
+    permission_classes = [AllowAny]
+    def get(self, request):
+        var = request.session.session_key
+        if Cart.objects.filter(session_key=var).exists():  # exist cart for user???
+            pass
+        else:
+            if not request.session.session_key:  # 1. create session for user if not exist
+                request.session.create()
+            cart = Cart.objects.create(user=None, session_key=var) # 2. create cart
+
+        cart = Cart.objects.get(session_key=var) # call
+        if request.user.is_authenticated:
+            cart.user = request.user
+
+        serializer = CartSerializer(instance=cart)
+        return Response(serializer.data)
