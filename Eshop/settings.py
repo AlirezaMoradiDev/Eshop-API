@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'django_cleanup.apps.CleanupConfig',
     'user',
+    'rest_framework.authtoken',
 ]
 
 MIDDLEWARE = [
@@ -71,6 +72,12 @@ DATABASES = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
+}
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ]
 }
 
 
