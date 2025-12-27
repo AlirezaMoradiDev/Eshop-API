@@ -1,9 +1,27 @@
 from django.db import models
-from django.db.models import Count
+from django.db.models import Count, Sum
 
 from user.models import MyUser
 from django.utils.text import slugify
 from django.core.validators import MinValueValidator
+
+
+class ProductManager(models.Manager):
+    def create_product(self, name, price, stock, category_id, discount_price=None ,description=None):
+        category = Category.objects.get(id=category_id)
+        count = 0
+        if Product.objects.filter(name=name).exists():
+            count = Product.objects.filter(name=name).count()
+        product = Product.objects.create(
+            name=name,
+            slug=slugify(f'{name}{count}'),
+            description = description,
+            price=price,
+            discount_price = discount_price,
+            stock = stock,
+            category = category)
+
+        return product
 
 
 class Category(models.Model):
@@ -26,19 +44,18 @@ class Product(models.Model):
     slug = models.SlugField(unique=True, blank=True, null=True)
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
-    discount_price = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    discount_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     stock = models.PositiveIntegerField(default=0)
     is_available = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    objects = ProductManager()
 
     def __str__(self):
         return self.name
 
-    def save(self, *args, **kwargs):
-        self.slug = slugify(self.name)
-        return super().save()
+
 
 
 class ProductImage(models.Model):
